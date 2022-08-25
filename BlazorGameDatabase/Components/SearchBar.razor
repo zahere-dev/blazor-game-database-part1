@@ -1,0 +1,43 @@
+﻿@using BlazorGameDatabase.Services
+@using BlazorGameDatabase.Models
+@inject NotifierService Notifier
+@implements IDisposable
+
+<div class="search-container">
+    <EditForm Model="@searchModel">
+        <span class="logo" href="/">Blazor Video Game Database</span>
+        <input id="name" class="search-input" name="search" placeholder="Search 500,000+ games" @bind="searchModel.searchKey" />
+        <button class="search-button">Search</button>
+    </EditForm>
+</div>
+
+@if(!string.IsNullOrEmpty(@searchModel.searchKey))
+{
+    Notifier.SearchKey = @searchModel.searchKey;
+    <h1>@Notifier.SearchKey</h1>
+}
+
+@code {
+    public SearchModel searchModel = new();
+
+    public async Task OnNotify()
+    {
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+
+    protected override void OnInitialized()
+    {
+        Notifier.Notify += OnNotify;
+    }
+
+
+    public void Dispose()
+    {
+        Notifier.Notify -= OnNotify;
+    }
+
+}

@@ -1,0 +1,104 @@
+﻿@using BlazorGameDatabase.Services
+@using BlazorGameDatabase.Models
+@using Newtonsoft.Json;
+@inject HttpService _httpService;
+@inject NotifierService Notifier
+@implements IDisposable
+
+<div class="filters">
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            @sortWord
+        </button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            @foreach (var word in @sortItems)
+            {
+                <a class="dropdown-item" @onclick="GetGameDataFromAPI" @onmousedown="(async (e) => sortWord = word)">@word</a>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="games">
+    @if (@gameList.Count > 0)
+    {
+        @foreach (var gameDetails in @gameList)
+        {
+            <div class="game">
+                <div class="game-thumb-container">
+                    <img src="@gameDetails.background_image"
+                 alt="thumbnail"
+                 class="game-thumbnail" />
+                </div>
+                <div class="game-description">
+                    <p class="game-name">@gameDetails.name</p>
+                    <div class="game-platforms">
+                        @foreach (var platformDetails in @gameDetails.platforms)
+                        {
+                            <img src="@platformDetails.platform.image_background"
+                     alt="@platformDetails.platform.image_background"
+                     class="game-platform" />
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private string sortWord = "Names";
+    private string _searchKey = string.Empty;
+    private Game? game = new();
+    private List<Result> gameList = new();
+
+
+    private string[] sortItems = { "Name", "Released", "Added", "Created", "Updated", "Rating", "Metacritic" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetGameDataFromAPI();
+        Notifier.Notify += OnNotify;
+    }
+
+    private async Task GetGameDataFromAPI()
+    {
+        try
+        {
+            Console.WriteLine($"sortWord {sortWord}");
+            var resp = await _httpService.GetGameData(sortWord, SearchKey);
+            game = JsonConvert.DeserializeObject<Game>(resp);
+            gameList = game.results;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    public async Task OnNotify()
+    {
+        await InvokeAsync(() =>
+        {
+            _searchKey = Notifier.SearchKey;
+            StateHasChanged();
+            GetGameDataFromAPI().ConfigureAwait(true);
+        });
+    }
+
+
+    public void Dispose()
+    {
+        Notifier.Notify -= OnNotify;
+    }
+
+    public string SearchKey
+    {
+        get => _searchKey;
+        set
+        {
+            _searchKey = value;
+        }
+    }
+
+}
